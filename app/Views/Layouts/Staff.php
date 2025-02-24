@@ -94,7 +94,7 @@
         <div class="text-sm font-semibold"><?= $_SESSION['user']['display_name']; ?></div>
         <div class="text-xs text-gray-300"><?= ucfirst($_SESSION['user']['role']); ?></div>
       </div>
-      <a href="#" class="hover:text-gray-400">
+      <a href="https://auth.japropertysc.com/logout" class="hover:text-gray-400">
         <i class="fa fa-sign-out-alt"></i>
       </a>
     </div>
