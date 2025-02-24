@@ -40,16 +40,26 @@
           <i class="fa fa-chevron-down ml-auto transform transition-all duration-200"></i>
         </button>
         <div class="acc-children hidden flex-col ml-6 border-l border-gray-700" data-accordion-content>
-          <a href="/staff/customers/all" class="block px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700">All Customers</a>
-          <a href="/staff/customers/new" class="block px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700">New Customer</a>
+          <a href="/customers/all" class="block px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700">All Customers</a>
+          <a href="/customers/new" class="block px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700">New Customer</a>
+        </div>
+      </div>
+      <!-- Marketing Section -->
+      <div class="acc-parent">
+        <button class="w-full flex items-center px-3 py-2 rounded hover:bg-gray-700 focus:outline-none transition" data-accordion-btn>
+          <i class="fa fa-users mr-2 w-4 text-center"></i>
+          <span class="flex-1 text-left">Marketing</span>
+          <i class="fa fa-chevron-down ml-auto transform transition-all duration-200"></i>
+        </button>
+        <div class="acc-children hidden flex-col ml-6 border-l border-gray-700" data-accordion-content>
           <div class="acc-parent">
             <button class="w-full flex items-center px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700 focus:outline-none transition" data-accordion-btn>
-              Segments
+              Public Site
               <i class="fa fa-chevron-down ml-auto transform transition-all duration-200 text-xs"></i>
             </button>
             <div class="acc-children hidden flex-col ml-4 border-l border-gray-700" data-accordion-content>
-              <a href="#" class="block px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700">Retail</a>
-              <a href="#" class="block px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700">Commercial</a>
+              <a href="#" class="block px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700">Edit</a>
+              <a href="#" class="block px-3 py-1.5 mt-1 text-sm rounded hover:bg-gray-700">Preview</a>
             </div>
           </div>
         </div>

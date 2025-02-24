@@ -1,0 +1,8 @@
+[24-Feb-2025 03:20:42 UTC] PHP Warning:  require_once(/home/japrdjyn/backoffice/app/Controllers/../Models/Customer.php): Failed to open stream: No such file or directory in /home/japrdjyn/backoffice/app/Controllers/CustomerController.php on line 5
+[24-Feb-2025 03:20:42 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/japrdjyn/backoffice/app/Controllers/../Models/Customer.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/japrdjyn/backoffice/app/Controllers/CustomerController.php:5
+Stack trace:
+#0 /home/japrdjyn/backoffice/vendor/composer/ClassLoader.php(576): include()
+#1 /home/japrdjyn/backoffice/vendor/composer/ClassLoader.php(427): Composer\Autoload\{closure}()
+#2 /home/japrdjyn/backoffice/index.php(86): Composer\Autoload\ClassLoader->loadClass()
+#3 {main}
+  thrown in /home/japrdjyn/backoffice/app/Controllers/CustomerController.php on line 5

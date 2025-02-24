@@ -1,65 +1,121 @@
 <?php
 // index.php - Entry point for the staff portal
-
-
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Dotenv\Dotenv;
-use App\Session\MySQLSessionHandler;
 
+// Load environment variables
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-
-// This must happen before session_start()
+// (Optional) Customize session cookie params
 $cookieParams = session_get_cookie_params();
 session_set_cookie_params([
     'lifetime' => $cookieParams['lifetime'],
     'path'     => '/',
-    'domain'   => '.example.com', // <--- note the leading dot
+    'domain'   => '.example.com',
     'secure'   => $cookieParams['secure'],
     'httponly' => $cookieParams['httponly'],
-    // Optional, but if you’re doing cross-site requests, you may need SameSite=None
-    'samesite' => 'None',         
+    'samesite' => 'None',
 ]);
 
-session_name('MYSESSIONID'); // Make sure both apps use the same session name
+session_name('MYSESSIONID'); 
 session_start();
 
-// Check if the user is logged in (i.e. if the 'user' key exists in the session)
+// 1) AUTH CHECK
 if (!isset($_SESSION['user'])) {
-    // Redirect to the authentication portal if not logged in
     header('Location: https://auth.japropertysc.com');
     exit;
 }
-
-// If logged in, check if the user is a customer and redirect accordingly
 if (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'customer') {
     header('Location: https://customer.japropertysc.com');
     exit;
 }
 
-// Retrieve the request URI (path only)
-$request = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+// 2) PARSE ROUTE
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$requestUri = rtrim($requestUri, '/'); // remove trailing slash
 
-// Route handling for the staff portal
-switch ($request) {
+// 3) ROUTING LOGIC
+switch ($requestUri) {
+    // Static routes
+    case '':
     case '/':
     case '/dashboard':
-        require __DIR__ . '/views/dashboard.php';
-        break;
-        
-    case '/profile':
-        require __DIR__ . '/views/profile.php';
-        break;
-        
-    case '/settings':
-        require __DIR__ . '/views/settings.php';
-        break;
-        
+        $controller = new \App\Controllers\DashboardController();
+        $controller->index();
+        exit;  // We call exit so no further code runs
+
     default:
-        http_response_code(404);
-        echo "404 Not Found";
-        break;
+        // === DYNAMIC OR ADDITIONAL ROUTES ===
+        // e.g. /customers/123
+        if (preg_match('#^/customers/(\d+)$#', $requestUri, $matches)) {
+            $_GET['id'] = $matches[1];
+            $controller = new \App\Controllers\CustomerController();
+            $controller->renderSingleCustomer();
+            exit;
+        }
+        // Finance routes
+        elseif ($requestUri === '/finance/journal/new') {
+            ob_start();
+            require_once __DIR__ . '/app/Views/Finance/NewJournalEntryView.php';
+            $content = ob_get_clean();
+            echo $content;
+            exit;
+        } elseif ($requestUri === '/finance/journal/view') {
+            ob_start();
+            require_once __DIR__ . '/app/Views/Finance/JournalEntryView.php';
+            $content = ob_get_clean();
+            echo $content;
+            exit;
+        } elseif ($requestUri === '/finance/expense/view') {
+            ob_start();
+            require_once __DIR__ . '/app/Views/Finance/ExistingExpenseView.php';
+            $content = ob_get_clean();
+            echo $content;
+            exit;
+        } elseif ($requestUri === '/finance/expense/new') {
+            ob_start();
+            require_once __DIR__ . '/app/Views/Finance/FieldTechNewExpenseView.php';
+            $content = ob_get_clean();
+            echo $content;
+            exit;
+        }
+        // Customer routes
+        elseif ($requestUri === '/customers/all') {
+            $controller = new \App\Controllers\CustomerController();
+            $controller->renderAllCustomers();
+            exit;
+        } elseif ($requestUri === '/customers/view') {
+            $controller = new \App\Controllers\CustomerController();
+            $controller->renderSingleCustomer();
+            exit;
+        } elseif ($requestUri === '/customers/new') {
+            $controller = new \App\Controllers\CustomerController();
+            $controller->renderNewCustomer();
+            exit;
+        }
+        // e.g. /customers/123/properties/new
+        elseif (preg_match('#^/customers/(\d+)/properties/new$#', $requestUri, $matches)) {
+            $customerId = $matches[1];
+            $controller = new \App\Controllers\PropertyController();
+            $controller->renderNewProperty($customerId);
+            exit;
+        }
+        // e.g. /customers/123/properties/newrental
+        elseif (preg_match('#^/customers/(\d+)/properties/newrental$#', $requestUri, $matches)) {
+            $customerId = $matches[1];
+            $controller = new \App\Controllers\PropertyController();
+            $controller->renderNewRentalProperty($customerId);
+            exit;
+        }
+        // 404 or fallback route
+        else {
+            // Example: show some fallback staff dashboard
+            ob_start();
+            require_once __DIR__ . '/app/Views/StaffDashboardView.php';
+            $content = ob_get_clean();
+            echo $content;
+            exit;
+        }
 }
-?>
