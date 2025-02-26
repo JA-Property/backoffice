@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => 'dev-master',
-        'version' => 'dev-master',
-        'reference' => '856a8ec16f4427235110171966f077e3768aa8c2',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => 'e7c64a881ece8621f2559597a59363552fc08a1f',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => 'dev-master',
-            'version' => 'dev-master',
-            'reference' => '856a8ec16f4427235110171966f077e3768aa8c2',
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'e7c64a881ece8621f2559597a59363552fc08a1f',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -34,6 +34,15 @@
             'reference' => 'e3fac8b24f56113f7cb96af14958c0dd16330f54',
             'type' => 'library',
             'install_path' => __DIR__ . '/../phpoption/phpoption',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'stripe/stripe-php' => array(
+            'pretty_version' => 'v16.6.0',
+            'version' => '16.6.0.0',
+            'reference' => 'd6de0a536f00b5c5c74f36b8f4d0d93b035499ff',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../stripe/stripe-php',
             'aliases' => array(),
             'dev_requirement' => false,
         ),

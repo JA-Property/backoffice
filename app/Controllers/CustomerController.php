@@ -2,7 +2,6 @@
 namespace App\Controllers;
 
 // Suppose your Customer.php is at C:\xampp\htdocs\app\Models\Customer.php
-require_once __DIR__ . '/../Models/Customer.php';
 
 use App\Models\Customer;
 
