@@ -93,13 +93,24 @@ $routes = [
 ],
 // Mobile-specific finance route
 [
-    'pattern' => '#^/mobile/finance/expense/new$#',
+    'pattern' => '#^/finance/expense/new$#',
     'handler' => function () {
         // Create an instance of the FinanceController and call the method to create a new expense for mobile
         $controller = new \App\Controllers\FinanceController();
         $controller->mobileNewExpense();
     }
 ],
+// Category search route
+// In your index.php or router
+[
+    'pattern' => '#^/finance/category/search$#',
+    'handler' => function () {
+        $controller = new \App\Controllers\Finance\CategoryController();
+        $controller->search();
+    }
+],
+
+
 
     // Customer management routes
     [
@@ -109,6 +120,7 @@ $routes = [
             $controller->renderAllCustomers();
         }
     ],
+    
     [
         'pattern' => '#^/customers/view$#',
         'handler' => function () {

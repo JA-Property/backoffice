@@ -112,7 +112,7 @@ class FinanceController
 
         // Capture the view output.
         ob_start();
-        include __DIR__ . '/../Views/Finance/FieldTechNewExpenseView.php';
+        include __DIR__ . '/../Views/Finance/NewExpense.php';
         $content = ob_get_clean();
 
         // Include the master layout.
@@ -135,7 +135,7 @@ class FinanceController
 
         // Capture the mobile view output.
         ob_start();
-        include __DIR__ . '/../Views/Mobile/NewExpense.php';
+        include __DIR__ . '/../Views/Finance/NewExpense.php';
         $content = ob_get_clean();
 
         // Include the mobile-specific layout.

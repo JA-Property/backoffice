@@ -1,2 +1,5 @@
-[26-Feb-2025 17:18:18 UTC] PHP Warning:  include(/home/japrdjyn/backoffice/app/Views/Mobile/Layouts/Staff.php): Failed to open stream: No such file or directory in /home/japrdjyn/backoffice/app/Views/Mobile/NewExpense.php on line 160
-[26-Feb-2025 17:18:18 UTC] PHP Warning:  include(): Failed opening '/home/japrdjyn/backoffice/app/Views/Mobile/Layouts/Staff.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/japrdjyn/backoffice/app/Views/Mobile/NewExpense.php on line 160
+[26-Feb-2025 18:59:11 UTC] PHP Fatal error:  Uncaught Error: Class "App\Controllers\CategoryController" not found in /home/japrdjyn/backoffice/index.php:107
+Stack trace:
+#0 /home/japrdjyn/backoffice/index.php(166): {closure}()
+#1 {main}
+  thrown in /home/japrdjyn/backoffice/index.php on line 107
