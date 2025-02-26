@@ -250,46 +250,63 @@
   </div>
 </div>
 
-<div x-data="{ billingType: '' }">
-  <!-- First Row: Billing Type + Conditional Field -->
+<div x-data="{ billingFormat: '' }">
+  <!-- First Row: Billing format + Conditional Field -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-    <!-- Billing Type -->
+    
+    <!-- Billing format -->
     <div>
-      <label for="billing_bill_type" class="block text-sm font-medium text-gray-700 mt-4">
-        Billing Type
+      <!-- Removed mt-4 from here -->
+      <label for="billing_bill_format" class="block text-sm font-medium text-gray-700">
+        Billing Format
       </label>
       <select 
-        name="billing_bill_type" 
-        id="billing_bill_type" 
-        x-model="billingType"
+        name="billing_bill_format" 
+        id="billing_bill_format" 
+        x-model="billingFormat"
         required 
         class="mt-1 block w-full border border-gray-300 rounded-md p-2 text-sm"
       >
-        <option value="" disabled selected>Select Billing Type</option>
-        <option value="Visit">Per Visit</option>
-        <option value="Pre">Prepay</option>
-        <option value="Post">Postpay</option>
-        <option value="Other">Other</option>
+        <option value="" disabled selected>Select Billing Format</option>
+        <option value="Visit">Invoice</option>
+        <option value="Statement">Statement</option>
       </select>
     </div>
 
     <!-- Conditional Field on the Right -->
-    <div>
-      <!-- If Postpay, show the Credit Check button -->
-      <div x-show="billingType === 'Post'" x-cloak>
-        <!-- Use an empty label for vertical alignment -->
-        <label class="block text-sm font-medium text-gray-700">&nbsp;</label>
+    <div class="flex items-end"> 
+      <!-- Only show the button if 'Statement' is selected -->
+      <div x-show="billingFormat === 'Statement'" x-cloak class="w-full">
+        <!-- If you still want a label for accessibility, you can make it sr-only -->
+        <label for="credit_check" class="sr-only">Perform Credit Check</label>
         <button 
+          id="credit_check"
           type="button" 
-          class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md"
+          class="inline-flex items-center justify-center w-full bg-blue-600 hover:bg-blue-700 
+                 text-white font-medium py-2 rounded-md"
         >
+          <!-- Example heroicon (Outline: Check Circle) -->
+          <svg 
+            class="h-5 w-5 mr-2" 
+            fill="none" 
+            stroke="currentColor" 
+            stroke-width="2" 
+            viewBox="0 0 24 24" 
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path 
+              stroke-linecap="round" 
+              stroke-linejoin="round" 
+              d="M9 12l2 2l4 -4m-7 7a9 9 0 1118 0a9 9 0 01-18 0z"
+            />
+          </svg>
           Perform Credit Check
         </button>
       </div>
-      <!-- If Other, show the Other Billing Type dropdown -->
-      <div x-show="billingType === 'Other'" x-cloak>
+      <!-- If Other, show the Other Billing format dropdown -->
+      <div x-show="billingFormat === 'Other'" x-cloak class="w-full">
         <label for="billing_other" class="block text-sm font-medium text-gray-700">
-          Other Billing Type
+          Other Billing Format
         </label>
         <select
           id="billing_other"
@@ -307,7 +324,7 @@
 
   <!-- Second Row: Postpay Additional Fields -->
   <div 
-    x-show="billingType === 'Post'"
+    x-show="billingFormat === 'Post'"
     x-cloak
     class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6"
   >
@@ -359,6 +376,7 @@
     </div>
   </div>
 </div>
+
 
 <div x-data="{ taxExempt: 'No', discountType: 'Flat', discountAmount: '' }">
   <div class="mt-4">
