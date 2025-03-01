@@ -2,7 +2,7 @@
 namespace App\Controllers;
 
 use App\Models\Journal;
-use App\Models\Expense;
+use App\Models\FinanceModels\Expense;
 
 class FinanceController
 {
@@ -58,88 +58,8 @@ class FinanceController
         include __DIR__ . '/../Views/Layouts/Staff.php';
     }
 
-    /**
-     * Display the details for an existing expense.
-     *
-     * This method retrieves a specific expense using an ID provided via GET,
-     * then renders a detailed view of that expense.
-     */
-    public function viewExpense()
-    {
-        // Retrieve the expense ID from GET parameters.
-        $expenseId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-        if ($expenseId <= 0) {
-            echo "Invalid expense ID.";
-            exit;
-        }
 
-        // Retrieve expense data from the model.
-        $expense = Expense::getExpenseById($expenseId);
-        if (!$expense) {
-            echo "Expense not found.";
-            exit;
-        }
 
-        // Set header and page titles for the expense detail view.
-        $headerIcon  = 'fa-file-invoice';
-        $headerTitle = 'Expense Details';
-        $pageTitle   = 'Expense Details';
 
-        // Make the $expense data available to the view.
-        ob_start();
-        include __DIR__ . '/../Views/Finance/ExistingExpenseView.php';
-        $content = ob_get_clean();
-
-        // Include the master layout.
-        include __DIR__ . '/../Views/Layouts/Staff.php';
-    }
-
-    /**
-     * Display the "New Expense" form.
-     *
-     * This method prepares any necessary data (for example, expense categories),
-     * captures the new expense view output, and then includes the master layout.
-     */
-    public function newExpense()
-    {
-        // Optionally, gather data for the form (e.g., expense categories)
-        // $categories = Expense::getExpenseCategories();
-
-        // Set header and page titles for the new expense form.
-        $headerIcon  = 'fa-plus-circle';
-        $headerTitle = 'New Expense';
-        $pageTitle   = 'New Expense';
-
-        // Capture the view output.
-        ob_start();
-        include __DIR__ . '/../Views/Finance/NewExpense.php';
-        $content = ob_get_clean();
-
-        // Include the master layout.
-        include __DIR__ . '/../Views/Layouts/Staff.php';
-    }
-
-    /**
-     * Display the mobile-specific "New Expense" form.
-     *
-     * This method loads a mobile-optimized view for creating a new expense and uses a mobile-specific layout.
-     */
-    public function mobileNewExpense()
-    {
-        // Optionally, gather mobile-specific data if needed.
-
-        // Set header and page titles for the mobile expense form.
-        $headerIcon  = 'fa-mobile';
-        $headerTitle = 'New Expense (Mobile)';
-        $pageTitle   = 'New Expense (Mobile)';
-
-        // Capture the mobile view output.
-        ob_start();
-        include __DIR__ . '/../Views/Finance/NewExpense.php';
-        $content = ob_get_clean();
-
-        // Include the mobile-specific layout.
-        include __DIR__ . '/../Views/Layouts/Staff.php';
-    }
 }
 ?>

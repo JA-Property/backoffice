@@ -1,5 +1,6 @@
-[26-Feb-2025 18:59:11 UTC] PHP Fatal error:  Uncaught Error: Class "App\Controllers\CategoryController" not found in /home/japrdjyn/backoffice/index.php:107
+[28-Feb-2025 00:50:01 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method App\Models\Customer::createCustomer() in /home/japrdjyn/backoffice/app/Controllers/CustomerController.php:190
 Stack trace:
-#0 /home/japrdjyn/backoffice/index.php(166): {closure}()
-#1 {main}
-  thrown in /home/japrdjyn/backoffice/index.php on line 107
+#0 /home/japrdjyn/backoffice/index.php(184): App\Controllers\CustomerController->createAction()
+#1 /home/japrdjyn/backoffice/index.php(209): {closure}()
+#2 {main}
+  thrown in /home/japrdjyn/backoffice/app/Controllers/CustomerController.php on line 190

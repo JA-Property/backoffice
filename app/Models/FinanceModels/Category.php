@@ -1,5 +1,5 @@
 <?php
-namespace App\Models\Finance;
+namespace App\Models\FinanceModels;
 
 class Category
 {
@@ -10,7 +10,7 @@ class Category
     {
         // Assuming you have a Database class to get a PDO connection
         $db = \App\Database::connect();
-        $sql = "SELECT id, name FROM categories WHERE name LIKE :term LIMIT 10";
+        $sql = "SELECT id, name FROM expense_categories WHERE name LIKE :term LIMIT 10";
         $stmt = $db->prepare($sql);
         $stmt->execute(['term' => '%' . $term . '%']);
         $results = [];

@@ -7,11 +7,10 @@ use App\Database;
 class Customer
 {
     /**
-     * Get a paginated list of customers with optional search, status filter, and sorting.
+     * Get a paginated list of customers with optional search and sorting.
      *
      * @param string|null $searchTerm   The text to search in name/email, etc.
-     * @param string|null $statusFilter e.g. "Active", "Inactive", "Overdue" or null for all.
-     * @param string|null $sortColumn   e.g. "name", "balance", "propertyCount", etc.
+     * @param string|null $sortColumn   e.g. "name", "propertyCount", "phone", "email".
      * @param string      $sortOrder    e.g. "ASC" or "DESC".
      * @param int         $offset       Starting row for pagination.
      * @param int         $limit        How many rows to fetch.
@@ -20,7 +19,6 @@ class Customer
      */
     public static function getCustomers(
         ?string $searchTerm,
-        ?string $statusFilter,
         ?string $sortColumn,
         string  $sortOrder,
         int     $offset,
@@ -28,56 +26,59 @@ class Customer
     ): array {
         $pdo = self::db();
 
-        // Build base query
-        // We'll left join a subquery that counts properties for each customer.
+        // Subqueries for primary email and phone:
+        //   - e:   the primary email (is_primary = 1) from customer_emails
+        //   - ph:  the primary phone (is_primary = 1) from customer_phones
+        // Also left join a property count subquery if you still use the "properties" table.
         $sql = "
-            SELECT 
+            SELECT
                 c.customer_id,
                 c.display_name AS name,
-                CONCAT(c.primary_first_name, ' ', c.primary_last_name) AS contact_name,
-                c.primary_email AS email,
-                c.primary_phone AS phone,
-                cs.status_name  AS status,
-                cs.status_color,
-                cs.status_icon,
-                c.balance,
+                CONCAT(c.first_name, ' ', c.last_name) AS contact_name,
+                e.primary_email AS email,
+                ph.primary_phone AS phone,
+                -- If you still want 'opening_balance', rename or remove below:
+                c.opening_balance,
                 IFNULL(propCounts.property_count, 0) AS propertyCount
             FROM customers c
-            LEFT JOIN customer_status cs 
-                   ON c.status_id = cs.status_id
+            LEFT JOIN (
+                SELECT customer_id, email_address AS primary_email
+                FROM customer_emails
+                WHERE is_primary = 1
+            ) e ON c.customer_id = e.customer_id
+            LEFT JOIN (
+                SELECT customer_id, phone_number AS primary_phone
+                FROM customer_phones
+                WHERE is_primary = 1
+            ) ph ON c.customer_id = ph.customer_id
             LEFT JOIN (
                 SELECT customer_id, COUNT(*) AS property_count
                 FROM properties
                 GROUP BY customer_id
-            ) AS propCounts 
-                   ON c.customer_id = propCounts.customer_id
+            ) AS propCounts ON c.customer_id = propCounts.customer_id
             WHERE 1=1
         ";
 
-        // Dynamic filters
         $params = [];
         if (!empty($searchTerm)) {
-            $sql .= " 
-              AND (
-                c.display_name LIKE :search
-                OR c.primary_first_name LIKE :search
-                OR c.primary_last_name  LIKE :search
-                OR c.primary_email      LIKE :search
-              )";
+            // If you want to search by email, note we joined the primary email as `email`
+            $sql .= "
+                AND (
+                    c.display_name LIKE :search
+                    OR c.first_name  LIKE :search
+                    OR c.last_name   LIKE :search
+                    OR e.primary_email LIKE :search
+                )
+            ";
             $params[':search'] = '%' . $searchTerm . '%';
-        }
-        if (!empty($statusFilter)) {
-            // We'll filter by the status_name in the joined table
-            $sql .= " AND cs.status_name = :statusFilter";
-            $params[':statusFilter'] = $statusFilter;
         }
 
         // Allowed sort columns
-        $allowedSortCols = ['name', 'propertyCount', 'phone', 'email', 'status', 'balance'];
+        $allowedSortCols = ['name', 'propertyCount', 'phone', 'email', 'opening_balance'];
         $orderByCol      = in_array($sortColumn, $allowedSortCols) ? $sortColumn : 'name';
         $orderByDir      = (strtoupper($sortOrder) === 'DESC') ? 'DESC' : 'ASC';
 
-        $sql .= " 
+        $sql .= "
             ORDER BY $orderByCol $orderByDir
             LIMIT :offset, :limit
         ";
@@ -86,7 +87,6 @@ class Customer
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit',  $limit,  PDO::PARAM_INT);
 
-        // Bind search/status parameters if provided
         foreach ($params as $k => $v) {
             $stmt->bindValue($k, $v, PDO::PARAM_STR);
         }
@@ -96,33 +96,34 @@ class Customer
     }
 
     /**
-     * Get total count of customers matching optional search and status filter.
+     * Get total count of customers matching optional search.
      * (Used for pagination.)
      */
-    public static function getCustomersCount(?string $searchTerm, ?string $statusFilter): int
+    public static function getCustomersCount(?string $searchTerm): int
     {
         $pdo = self::db();
         $sql = "
             SELECT COUNT(*) AS cnt
             FROM customers c
-            LEFT JOIN customer_status cs ON c.status_id = cs.status_id
+            LEFT JOIN (
+                SELECT customer_id, email_address AS primary_email
+                FROM customer_emails
+                WHERE is_primary = 1
+            ) e ON c.customer_id = e.customer_id
             WHERE 1=1
         ";
-        $params = [];
 
+        $params = [];
         if (!empty($searchTerm)) {
-            $sql .= " 
-              AND (
-                c.display_name LIKE :search
-                OR c.primary_first_name LIKE :search
-                OR c.primary_last_name  LIKE :search
-                OR c.primary_email      LIKE :search
-              )";
+            $sql .= "
+                AND (
+                    c.display_name LIKE :search
+                    OR c.first_name  LIKE :search
+                    OR c.last_name   LIKE :search
+                    OR e.primary_email LIKE :search
+                )
+            ";
             $params[':search'] = '%' . $searchTerm . '%';
-        }
-        if (!empty($statusFilter)) {
-            $sql .= " AND cs.status_name = :statusFilter";
-            $params[':statusFilter'] = $statusFilter;
         }
 
         $stmt = $pdo->prepare($sql);
@@ -136,81 +137,23 @@ class Customer
     }
 
     /**
-     * Sum of all customer balances (if your schema has a 'balance' column).
+     * (Optional) Sum of all customer opening balances (if you want a total).
      */
     public static function getTotalBalance(): float
     {
         $pdo = self::db();
-        $sql = "SELECT SUM(balance) AS total_balance FROM customers";
+        // If you no longer track a 'balance' column, you could rename it to 'opening_balance'
+        $sql = "SELECT SUM(opening_balance) AS total_balance FROM customers";
         $stmt = $pdo->query($sql);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $row && $row['total_balance'] 
-            ? (float)$row['total_balance'] 
+        return $row && $row['total_balance']
+            ? (float)$row['total_balance']
             : 0.0;
     }
 
     /**
-     * Batch update the status_id for multiple customers.
-     * E.g. Mark them as Overdue, etc.
-     */
-    public static function batchUpdateStatus(array $customerIds, int $newStatusId): int
-    {
-        if (empty($customerIds)) {
-            return 0;
-        }
-        $pdo = self::db();
-
-        // placeholders for IN clause
-        $placeholders = implode(',', array_fill(0, count($customerIds), '?'));
-
-        $sql = "UPDATE customers 
-                SET status_id = :status_id
-                WHERE customer_id IN ($placeholders)";
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':status_id', $newStatusId, PDO::PARAM_INT);
-
-        // Bind each ID
-        $i = 1;
-        foreach ($customerIds as $id) {
-            $stmt->bindValue($i, $id, PDO::PARAM_INT);
-            $i++;
-        }
-
-        $stmt->execute();
-        return $stmt->rowCount();
-    }
-
-    /**
-     * For batch emailing or exporting. Implementation up to you.
-     */
-    public static function batchSendEmail(array $customerIds): void
-    {
-        // Example: 
-        // foreach ($customerIds as $cid) { sendEmailToCustomer($cid); }
-    }
-
-    /**
-     * Retrieve the status_id by a given status_name (e.g. Overdue).
-     */
-    public static function getStatusIdByName(string $statusName): ?int
-    {
-        $pdo = self::db();
-        $stmt = $pdo->prepare("
-            SELECT status_id 
-            FROM customer_status 
-            WHERE status_name = :name 
-            LIMIT 1
-        ");
-        $stmt->execute([':name' => $statusName]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ? (int)$row['status_id'] : null;
-    }
-
-    /**
-     * Get a single customer record by ID.
+     * Example of a single-customer fetch by ID.
      */
     public static function getCustomerById(int $customerId): ?array
     {
@@ -223,39 +166,47 @@ class Customer
     }
 
     /**
-     * Retrieve all addresses for a given customer.
+     * Retrieve all addresses for a given customer (using your new 'customer_addresses' table).
      */
     public static function getCustomerAddresses(int $customerId): array
     {
         $pdo = self::db();
-        $stmt = $pdo->prepare("SELECT * FROM addresses WHERE customer_id = :id");
+        $stmt = $pdo->prepare("
+            SELECT *
+            FROM customer_addresses
+            WHERE customer_id = :id
+        ");
         $stmt->execute([':id' => $customerId]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
-     * Retrieve all properties for a given customer.
+     * Retrieve all properties for a given customer (if you still have a 'properties' table).
      */
     public static function getCustomerProperties(int $customerId): array
     {
         $pdo = self::db();
-        $stmt = $pdo->prepare("SELECT * FROM properties WHERE customer_id = :id");
+        $stmt = $pdo->prepare("
+            SELECT *
+            FROM properties
+            WHERE customer_id = :id
+        ");
         $stmt->execute([':id' => $customerId]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
-     * Retrieve all notes for a given customer.
+     * Retrieve all notes for a given customer (if you still have a 'customer_notes' table).
      */
     public static function getCustomerNotes(int $customerId): array
     {
         $pdo = self::db();
         $stmt = $pdo->prepare("
-            SELECT * 
-            FROM customer_notes 
-            WHERE customer_id = :id 
+            SELECT *
+            FROM customer_notes
+            WHERE customer_id = :id
             ORDER BY created_at DESC
         ");
         $stmt->execute([':id' => $customerId]);
@@ -264,11 +215,50 @@ class Customer
     }
 
     /**
-     * Another example: find a single customer by ID (alias to getCustomerById).
+     * Alias for getCustomerById
      */
     public static function find(int $customerId): ?array
     {
         return self::getCustomerById($customerId);
+    }
+
+    /**
+     * If you still need to batch update something (e.g., default discount).
+     * Otherwise remove or adapt for your new schema.
+     */
+    public static function batchUpdateDiscount(array $customerIds, bool $enableDiscount): int
+    {
+        if (empty($customerIds)) {
+            return 0;
+        }
+        $pdo = self::db();
+        $placeholders = implode(',', array_fill(0, count($customerIds), '?'));
+
+        $sql = "UPDATE customers
+                SET default_discount_enabled = :enableDiscount
+                WHERE customer_id IN ($placeholders)";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':enableDiscount', $enableDiscount, PDO::PARAM_BOOL);
+
+        // Bind each ID in the array
+        $i = 1;
+        foreach ($customerIds as $id) {
+            $stmt->bindValue($i, $id, PDO::PARAM_INT);
+            $i++;
+        }
+
+        $stmt->execute();
+        return $stmt->rowCount();
+    }
+
+    /**
+     * Stub function for sending emails. Implementation up to you.
+     */
+    public static function batchSendEmail(array $customerIds): void
+    {
+        // Example:
+        // foreach ($customerIds as $cid) { sendEmailToCustomer($cid); }
     }
 
     /**
@@ -278,4 +268,248 @@ class Customer
     {
         return Database::connect();
     }
+
+
+/**
+ * Create a new customer along with their primary email, phone, and billing address.
+ * Inserts all possible columns from the "customers" table.
+ *
+ * @param array $data The form data (e.g., $_POST).
+ * @return int The new customer_id.
+ * @throws \Exception If something fails during the insert.
+ */
+public static function createCustomer(array $data): int
+{
+    var_dump($_POST);
+    
+    $firstName = null;
+    $lastName  = null;
+    $fullyQualifiedName = null;
+    $displayName = null;
+    
+    // If they used Residential fields
+    if (!empty($data['res_first_name']) || !empty($data['res_last_name'])) {
+        $firstName = $data['res_first_name'] ?? '';
+        $lastName  = $data['res_last_name']  ?? '';
+        // Combine first and last, convert to lowercase then uppercase the first letter of each word
+        $displayName = ucwords(strtolower(trim($firstName . ' ' . $lastName)));
+        $fullyQualifiedName = null;
+    }
+    // Else if they used Commercial fields
+    elseif (!empty($data['com_first_name']) || !empty($data['com_last_name'])) {
+        $firstName = $data['com_first_name'] ?? '';
+        $lastName  = $data['com_last_name']  ?? '';
+        // Use the provided display name if available; otherwise, you could also combine first and last
+        $fullyQualifiedName = ucwords(strtolower($data['company_name'] ?? ''));
+        $displayName = $fullyQualifiedName;
+
+    }
+    // Else if they used Other fields
+    elseif (!empty($data['oth_first_name']) || !empty($data['oth_last_name'])) {
+        $firstName = $data['oth_first_name'] ?? '';
+        $lastName  = $data['oth_last_name']  ?? '';
+        $fullyQualifiedName = ucwords(strtolower($data['organization_name'] ?? ''));
+        $displayName = $fullyQualifiedName;
+
+    }
+    
+    
+    $pdo = self::db();
+    $pdo->beginTransaction();
+
+    try {
+        // Insert into `customers` with ALL columns from the schema:
+        $sql = "
+            INSERT INTO customers (
+                customer_type,
+                display_name,
+                company_name,
+                title,
+                first_name,
+                middle_name,
+                last_name,
+                suffix,
+                print_name_on_check,
+                org_type,
+                comm_email,
+                comm_phone,
+                comm_sms,
+                preferred_delivery_method,
+                billing_format,
+                invoice_prefix,
+                opening_balance,
+                opening_balance_date,
+                discount_type,
+                discount_amount,
+                default_discount_enabled,
+                terms,
+                tax_exempt,
+                tax_exempt_id,
+                tax_exempt_reason_code,
+                resale_number,
+                referral_source,
+                referral_other_text,
+                notes,
+                qbo_active_flag,
+                qbo_customer_id,
+                qbo_bill_with_parent,
+                qbo_parent_ref,
+                qbo_sync_token,
+                stripe_customer_id,
+                created_by,
+                created_at
+            ) VALUES (
+                :customer_type,
+                :display_name,
+                :company_name,
+                :title,
+                :first_name,
+                :middle_name,
+                :last_name,
+                :suffix,
+                :print_name_on_check,
+                :org_type,
+                :comm_email,
+                :comm_phone,
+                :comm_sms,
+                :preferred_delivery_method,
+                :billing_format,
+                :invoice_prefix,
+                :opening_balance,
+                :opening_balance_date,
+                :discount_type,
+                :discount_amount,
+                :default_discount_enabled,
+                :terms,
+                :tax_exempt,
+                :tax_exempt_id,
+                :tax_exempt_reason_code,
+                :resale_number,
+                :referral_source,
+                :referral_other_text,
+                :notes,
+                :qbo_active_flag,
+                :qbo_customer_id,
+                :qbo_bill_with_parent,
+                :qbo_parent_ref,
+                :qbo_sync_token,
+                :stripe_customer_id,
+                :created_by,
+                NOW()
+            )
+        ";
+
+
+
+        // Prepare insert
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':customer_type'            => $data['customer_type']             ?? 'Residential',
+            ':display_name'             => $displayName ?? null,
+            ':company_name'             => $fullyQualifiedName              ?? null,
+            ':title'                    => $data['title']                     ?? null,
+            ':first_name'               => $firstName                ?? null,
+            ':middle_name'              => $data['middle_name']               ?? null,
+            ':last_name'                => $lastName                            ?? null,
+            ':suffix'                   => $data['suffix']                    ?? null,
+            ':print_name_on_check'      => $fullyQualifiedName      ?? null,
+            ':org_type'                 => $data['org_type']                  ?? null,
+            ':comm_email'               => !empty($data['comm_email'])        ? 1 : 0,
+            ':comm_phone'               => !empty($data['comm_phone'])        ? 1 : 0,
+            ':comm_sms'                 => !empty($data['comm_sms'])          ? 1 : 0,
+            ':preferred_delivery_method'=> $data['preferred_delivery_method'] ?? 'USPS',
+            ':billing_format'           => $data['billing_format']            ?? 'Invoice',
+            ':invoice_prefix'           => $data['invoice_prefix']            ?? null,
+            ':opening_balance'          => $data['opening_balance']           ?? null,
+            ':opening_balance_date'     => $data['opening_balance_date']      ?? null,
+            ':discount_type'            => $data['discount_type']             ?? null,
+            ':discount_amount'          => $data['discount_amount']           ?? null,
+            ':default_discount_enabled' => !empty($data['default_discount_enabled']) ? 1 : 0,
+            ':terms'                    => $data['terms']                     ?? null,
+            ':tax_exempt'               => $data['tax_exempt']                ?? 'none',
+            ':tax_exempt_id'            => $data['tax_exempt_id']             ?? null,
+            ':tax_exempt_reason_code'   => $data['tax_exempt_reason_code']    ?? null,
+            ':resale_number'            => $data['resale_number']             ?? null,
+            ':referral_source'          => $data['referral_source']           ?? null,
+            ':referral_other_text'      => $data['referral_other_text']       ?? null,
+            ':notes'                    => $data['notes']                     ?? null,
+            ':qbo_active_flag'          => isset($data['qbo_active_flag'])    ? (int)$data['qbo_active_flag'] : 0,
+            ':qbo_customer_id'          => $data['qbo_customer_id']           ?? null,
+            ':qbo_bill_with_parent'     => isset($data['qbo_bill_with_parent']) ? (int)$data['qbo_bill_with_parent'] : null,
+            ':qbo_parent_ref'           => $data['qbo_parent_ref']            ?? null,
+            ':qbo_sync_token'           => $data['qbo_sync_token']            ?? null,
+            ':stripe_customer_id'       => $data['stripe_customer_id']        ?? null,
+            ':created_by'               => $data['created_by']                ?? null,
+        ]);
+
+        // Get new customer_id
+        $customerId = (int)$pdo->lastInsertId();
+
+        // 2) Insert primary email, if provided
+        if (!empty($data['primary_email'])) {
+            $stmtEmail = $pdo->prepare("
+                INSERT INTO customer_emails
+                    (customer_id, email_address, email_type, is_primary, created_at)
+                VALUES
+                    (:customer_id, :email_address, :email_type, 1, NOW())
+            ");
+            $stmtEmail->execute([
+                ':customer_id'   => $customerId,
+                ':email_address' => $data['primary_email'],
+                ':email_type'    => $data['email_type'] ?? 'Work', // or 'Personal', etc.
+            ]);
+        }
+
+        // 3) Insert primary phone, if provided
+        if (!empty($data['primary_phone'])) {
+            $stmtPhone = $pdo->prepare("
+                INSERT INTO customer_phones
+                    (customer_id, phone_number, phone_type, is_primary, created_at)
+                VALUES
+                    (:customer_id, :phone_number, :phone_type, 1, NOW())
+            ");
+            $stmtPhone->execute([
+                ':customer_id' => $customerId,
+                ':phone_number'=> $data['primary_phone'],
+                ':phone_type'  => $data['phone_type'] ?? 'Mobile',
+            ]);
+        }
+
+        // 4) Insert billing address, if provided
+        if (!empty($data['billing_address'])) {
+            $stmtAddr = $pdo->prepare("
+                INSERT INTO customer_addresses
+                    (customer_id, address_type,
+                     address_line1, address_line2, city,
+                     state_province, postal_code,
+                     is_primary, created_at)
+                VALUES
+                    (:customer_id, :address_type,
+                     :address_line1, :address_line2, :city,
+                     :state_province, :postal_code,
+                     1, NOW())
+            ");
+            $stmtAddr->execute([
+                ':customer_id'    => $customerId,
+                ':address_type'   => 'Billing',  // If your form has other address types, adapt accordingly
+                ':address_line1'  => $data['billing_address']  ?? '',
+                ':address_line2'  => $data['billing_address2'] ?? '',
+                ':city'           => $data['billing_city']     ?? '',
+                ':state_province' => $data['billing_state']    ?? '',
+                ':postal_code'    => $data['billing_zip']      ?? '',
+            ]);
+        }
+
+        // 5) Commit transaction
+        $pdo->commit();
+        return $customerId;
+
+    } catch (\Exception $ex) {
+        // If any insert fails, rollback so no partial data remains
+        $pdo->rollBack();
+        throw $ex;
+    }
+}
+
+
 }

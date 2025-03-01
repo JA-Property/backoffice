@@ -1,6 +1,6 @@
 <?php
 /**
- * index.php - Entry point for the staff portal.
+ * /index.php - Entry point for the staff/back office portal.
  *
  * This file initializes the environment, starts the session, checks authentication,
  * and routes the request to the appropriate controller or view using a custom routing system.
@@ -58,58 +58,83 @@ $routes = [
             $controller->renderSingleCustomer();
         }
     ],
-   // Finance routes
-[
-    'pattern' => '#^/finance/journal/new$#',
-    'handler' => function () {
-        // Create an instance of the FinanceController and call the method for new journal entries
-        $controller = new \App\Controllers\FinanceController();
-        $controller->newJournalEntry();
-    }
-],
-[
-    'pattern' => '#^/finance/journal/view$#',
-    'handler' => function () {
-        // Create an instance of the FinanceController and call the method to view journal entries
-        $controller = new \App\Controllers\FinanceController();
-        $controller->viewJournalEntry();
-    }
-],
-[
-    'pattern' => '#^/finance/expense/view$#',
-    'handler' => function () {
-        // Create an instance of the FinanceController and call the method to view an expense
-        $controller = new \App\Controllers\FinanceController();
-        $controller->viewExpense();
-    }
-],
-[
-    'pattern' => '#^/finance/expense/new$#',
-    'handler' => function () {
-        // Create an instance of the FinanceController and call the method to create a new expense
-        $controller = new \App\Controllers\FinanceController();
-        $controller->newExpense();
-    }
-],
-// Mobile-specific finance route
-[
-    'pattern' => '#^/finance/expense/new$#',
-    'handler' => function () {
-        // Create an instance of the FinanceController and call the method to create a new expense for mobile
-        $controller = new \App\Controllers\FinanceController();
-        $controller->mobileNewExpense();
-    }
-],
-// Category search route
-// In your index.php or router
-[
-    'pattern' => '#^/finance/category/search$#',
-    'handler' => function () {
-        $controller = new \App\Controllers\Finance\CategoryController();
-        $controller->search();
-    }
-],
+        // -----------------------------------------------------------------------------
+        // Finance Routes
+        // -----------------------------------------------------------------------------
+          // Expense View Route using URL segment for the expense ID - Allows URL of https://backoffice.japropertysc.com/finance/expense/view/'id'
+            [
+                'pattern' => '#^/finance/expense/view/(\d+)$#',
+                'handler' => function ($matches) {
+                    // $matches[1] now contains the expense ID from the URL
+                    $_GET['id'] = $matches[1]; // Alternatively, pass it directly if you adjust your controller
+                    $controller = new \App\Controllers\FinanceControllers\ExpenseController();
+                    $controller->renderViewExpenseView();
+                }
+            ],
 
+            // New Expense Route
+            [
+                'pattern' => '#^/finance/expense/new$#',
+                'handler' => function () {
+                    $controller = new \App\Controllers\FinanceControllers\ExpenseController();
+                    $controller->renderNewExpenseView();
+                }
+            ],
+
+            //Expense Helper Routes
+            // Expense Category search route
+            [
+                'pattern' => '#^/finance/category/search$#',
+                'handler' => function () {
+                    $controller = new \App\Controllers\FinanceControllers\CategoryController();
+                    $controller->search();
+                }
+            ],
+
+            // Expense Merchant search route
+            [
+                'pattern' => '#^/finance/merchant/search$#',
+                'handler' => function () {
+                    $controller = new \App\Controllers\FinanceControllers\MerchantController();
+                    $controller->search();
+                }
+            ],
+
+            // Expense Payment Methods Get Dropdown route
+            [
+                'pattern' => '#^/finance/payment-methods$#',
+                'handler' => function () {
+                    $controller = new \App\Controllers\FinanceControllers\ExpensePaymentMethodController();
+                    $controller->getAll();
+                }
+            ],
+
+            // Expense Submission Route
+            [
+                'pattern' => '#^/finance/expense/submit$#',
+                'handler' => function () {
+                    $controller = new \App\Controllers\FinanceControllers\ExpenseController();
+                    $controller->submitExpense();
+                }
+            ],
+
+            // Journal Routes
+            [
+                'pattern' => '#^/finance/journal/new$#',
+                'handler' => function () {
+                    // Create an instance of the FinanceController and call the method for new journal entries
+                    $controller = new \App\Controllers\FinanceController();
+                    $controller->newJournalEntry();
+                }
+            ],
+            [
+                'pattern' => '#^/finance/journal/view$#',
+                'handler' => function () {
+                    // Create an instance of the FinanceController and call the method to view journal entries
+                    $controller = new \App\Controllers\FinanceController();
+                    $controller->viewJournalEntry();
+                }
+            ],
 
 
     // Customer management routes
@@ -120,7 +145,7 @@ $routes = [
             $controller->renderAllCustomers();
         }
     ],
-    
+
     [
         'pattern' => '#^/customers/view$#',
         'handler' => function () {
@@ -128,30 +153,31 @@ $routes = [
             $controller->renderSingleCustomer();
         }
     ],
+    // Property routes 
     [
-        'pattern' => '#^/customers/new$#',
+        'pattern' => '#^/customers/create$#',
         'handler' => function () {
             $controller = new \App\Controllers\CustomerController();
-            $controller->renderNewCustomer();
+            $controller->createAction();
         }
     ],
-    // Property routes for customers
+    // Property routes - New property creation route
     [
-        'pattern' => '#^/customers/(\d+)/properties/new$#',
-        'handler' => function ($matches) {
-            $customerId = $matches[1];
+        'pattern' => '#^/properties/create$#',
+        'handler' => function () {
             $controller = new \App\Controllers\PropertyController();
-            $controller->renderNewProperty($customerId);
+            $controller->createAction();
         }
     ],
     [
-        'pattern' => '#^/customers/(\d+)/properties/newrental$#',
+        'pattern' => '#^/field$#',
         'handler' => function ($matches) {
-            $customerId = $matches[1];
-            $controller = new \App\Controllers\PropertyController();
-            $controller->renderNewRentalProperty($customerId);
+            require_once("app/Views/FieldTechDashboard.php");
+            exit;
         }
     ]
+    ,
+    
 ];
 
 // -----------------------------------------------------------------------------
@@ -185,21 +211,22 @@ if (!$foundRoute) {
  *
  * This function configures the session cookie to enforce security best practices.
  */
-function initializeSession() {
+function initializeSession()
+{
     // Retrieve current session cookie parameters
     $cookieParams = session_get_cookie_params();
     // Set new parameters with secure options such as domain scoping and samesite policy
     session_set_cookie_params([
         'lifetime' => $cookieParams['lifetime'],
-        'path'     => '/',
-        'domain'   => '.example.com', // Adjust to your domain
-        'secure'   => $cookieParams['secure'],
+        'path' => '/',
+        'domain' => '.example.com', // Adjust to your domain
+        'secure' => $cookieParams['secure'],
         'httponly' => $cookieParams['httponly'],
         'samesite' => 'None',
     ]);
-    
+
     // Set a custom session name
-    session_name('MYSESSIONID'); 
+    session_name('MYSESSIONID');
     // Start the session
     session_start();
 }
@@ -210,7 +237,8 @@ function initializeSession() {
  * If the user is not logged in or does not have the proper role, they are redirected
  * to the appropriate authentication or customer portal.
  */
-function checkAuthentication() {
+function checkAuthentication()
+{
     // Redirect unauthenticated users to the authentication service
     if (!isset($_SESSION['user'])) {
         header('Location: https://auth.japropertysc.com');
@@ -228,7 +256,8 @@ function checkAuthentication() {
  *
  * @return string Returns the request URI without any trailing slash.
  */
-function getRequestUri() {
+function getRequestUri()
+{
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     // Normalize the URI by removing the trailing slash for consistency
     return rtrim($uri, '/');
@@ -242,7 +271,8 @@ function getRequestUri() {
  *
  * @param string $viewPath Relative path to the PHP view file.
  */
-function renderView($viewPath) {
+function renderView($viewPath)
+{
     // Start output buffering to capture view output
     ob_start();
     require_once __DIR__ . $viewPath;

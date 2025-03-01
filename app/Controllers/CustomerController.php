@@ -117,6 +117,7 @@ class CustomerController
      */
     public function renderSingleCustomer()
     {
+        
         // Retrieve the customer ID from GET parameters.
         $customerId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
         if ($customerId <= 0) {
@@ -182,6 +183,37 @@ class CustomerController
         // Include the master layout file, which will echo $content in the correct spot.
         include __DIR__ . '/../Views/Layouts/Staff.php';
     }
+    public function createAction()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                // Call the model's method to do inserts
+                $customerId = Customer::createCustomer($_POST);
+
+         
+            // Then pass $customer to your view:
+    
+                // Set a flash message to show after redirect
+                $_SESSION['toast'] = [
+                    'type' => 'success', // could be 'success', 'error', etc.
+                    'message' => 'Customer created successfully.'
+                ];
+    
+                // Redirect to the view page
+                header("Location: /customers/view?id=$customerId&tab=properties");
+                exit;
+            } catch (\Exception $e) {
+                // Handle exception (optionally set an error toast)
+                echo "Error creating customer: " . $e->getMessage();
+                exit;
+            }
+        } else {
+            // If GET request, render the 'New Customer' form page
+            $this->renderNewCustomer();
+        }
+    }
+    
+
     /**
      * (Optional) Example for a dedicated "export" function for batch actions.
      */

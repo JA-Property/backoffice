@@ -1,7 +1,7 @@
 <?php
 
-namespace App\Controllers\Finance;
-use App\Models\Category;
+namespace App\Controllers\FinanceControllers;
+use App\Models\FinanceModels\Category;
 
 class CategoryController
 {
