@@ -19,17 +19,16 @@ class Customer
      */
     public static function getCustomers(
         ?string $searchTerm,
+        ?string $statusFilter,
         ?string $sortColumn,
         string  $sortOrder,
         int     $offset,
         int     $limit
-    ): array {
+    ): array 
+    {
         $pdo = self::db();
-
-        // Subqueries for primary email and phone:
-        //   - e:   the primary email (is_primary = 1) from customer_emails
-        //   - ph:  the primary phone (is_primary = 1) from customer_phones
-        // Also left join a property count subquery if you still use the "properties" table.
+    
+        // Build base query
         $sql = "
             SELECT
                 c.customer_id,
@@ -37,31 +36,39 @@ class Customer
                 CONCAT(c.first_name, ' ', c.last_name) AS contact_name,
                 e.primary_email AS email,
                 ph.primary_phone AS phone,
-                -- If you still want 'opening_balance', rename or remove below:
                 c.opening_balance,
-                IFNULL(propCounts.property_count, 0) AS propertyCount
+                IFNULL(propCounts.property_count, 0) AS propertyCount,
+    
+                -- Suppose we also select c.status_id if you have that in DB
+                c.status_id
+    
             FROM customers c
+    
             LEFT JOIN (
                 SELECT customer_id, email_address AS primary_email
                 FROM customer_emails
                 WHERE is_primary = 1
             ) e ON c.customer_id = e.customer_id
+    
             LEFT JOIN (
                 SELECT customer_id, phone_number AS primary_phone
                 FROM customer_phones
                 WHERE is_primary = 1
             ) ph ON c.customer_id = ph.customer_id
+    
             LEFT JOIN (
                 SELECT customer_id, COUNT(*) AS property_count
                 FROM properties
                 GROUP BY customer_id
             ) AS propCounts ON c.customer_id = propCounts.customer_id
+    
             WHERE 1=1
         ";
-
+    
         $params = [];
+    
+        // If searching by name/email
         if (!empty($searchTerm)) {
-            // If you want to search by email, note we joined the primary email as `email`
             $sql .= "
                 AND (
                     c.display_name LIKE :search
@@ -72,35 +79,43 @@ class Customer
             ";
             $params[':search'] = '%' . $searchTerm . '%';
         }
-
+    
+        // If status filter is set (e.g. "Active", "Overdue", etc.)
+        if (!empty($statusFilter)) {
+            $sql .= " AND c.status_id = :statusFilter";
+            $params[':statusFilter'] = $statusFilter;
+        }
+    
         // Allowed sort columns
-        $allowedSortCols = ['name', 'propertyCount', 'phone', 'email', 'opening_balance'];
+        $allowedSortCols = ['name','propertyCount','phone','email','opening_balance','status'];
         $orderByCol      = in_array($sortColumn, $allowedSortCols) ? $sortColumn : 'name';
         $orderByDir      = (strtoupper($sortOrder) === 'DESC') ? 'DESC' : 'ASC';
-
+    
         $sql .= "
             ORDER BY $orderByCol $orderByDir
             LIMIT :offset, :limit
         ";
-
+    
         $stmt = $pdo->prepare($sql);
+    
+        // Bind paging
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit',  $limit,  PDO::PARAM_INT);
-
+    
+        // Bind search/status if present
         foreach ($params as $k => $v) {
             $stmt->bindValue($k, $v, PDO::PARAM_STR);
         }
+    
         $stmt->execute();
-
+    
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
-
-    /**
-     * Get total count of customers matching optional search.
-     * (Used for pagination.)
-     */
-    public static function getCustomersCount(?string $searchTerm): int
-    {
+    
+    public static function getCustomersCount(
+        ?string $searchTerm,
+        ?string $statusFilter
+    ): int {
         $pdo = self::db();
         $sql = "
             SELECT COUNT(*) AS cnt
@@ -112,7 +127,7 @@ class Customer
             ) e ON c.customer_id = e.customer_id
             WHERE 1=1
         ";
-
+    
         $params = [];
         if (!empty($searchTerm)) {
             $sql .= "
@@ -125,17 +140,23 @@ class Customer
             ";
             $params[':search'] = '%' . $searchTerm . '%';
         }
-
+    
+        // same idea for status
+        if (!empty($statusFilter)) {
+            $sql .= " AND c.status_id = :statusFilter";
+            $params[':statusFilter'] = $statusFilter;
+        }
+    
         $stmt = $pdo->prepare($sql);
         foreach ($params as $k => $v) {
             $stmt->bindValue($k, $v, PDO::PARAM_STR);
         }
         $stmt->execute();
-
+    
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? (int)$row['cnt'] : 0;
     }
-
+    
     /**
      * (Optional) Sum of all customer opening balances (if you want a total).
      */
@@ -158,12 +179,85 @@ class Customer
     public static function getCustomerById(int $customerId): ?array
     {
         $pdo = self::db();
-        $stmt = $pdo->prepare("SELECT * FROM customers WHERE customer_id = :id LIMIT 1");
+    
+        // We select everything from customers (c.*) plus four extra columns:
+        // 1) primary_email
+        // 2) email_count
+        // 3) primary_phone
+        // 4) phone_count
+        // In getCustomerById(), we'll add:
+
+$sql = "
+  SELECT
+    c.*,
+
+    -- Already existing email + phone sub-joins:
+    e.primary_email,
+    e.email_count,
+    ph.primary_phone,
+    ph.phone_count,
+
+    -- New sub-join for primary billing address & billing_count:
+    b.primary_billing,
+    b.billing_count
+
+  FROM customers c
+
+  -- Sub-join for email (existing)
+  LEFT JOIN (
+      SELECT
+          ce.customer_id,
+          ce.email_address AS primary_email,
+          (SELECT COUNT(*) FROM customer_emails WHERE customer_id = ce.customer_id) AS email_count
+      FROM customer_emails ce
+      WHERE ce.is_primary = 1
+  ) AS e ON c.customer_id = e.customer_id
+
+  -- Sub-join for phone (existing)
+  LEFT JOIN (
+      SELECT
+          cp.customer_id,
+          cp.phone_number AS primary_phone,
+          (SELECT COUNT(*) FROM customer_phones WHERE customer_id = cp.customer_id) AS phone_count
+      FROM customer_phones cp
+      WHERE cp.is_primary = 1
+  ) AS ph ON c.customer_id = ph.customer_id
+
+  -- Sub-join for billing address (NEW)
+  LEFT JOIN (
+      SELECT
+          ca.customer_id,
+          -- Combine line1/line2/city/state/zip
+          CONCAT(
+              IFNULL(ca.address_line1, ''), 
+              CASE WHEN ca.address_line2 != '' THEN CONCAT(', ', ca.address_line2) ELSE '' END,
+              CASE WHEN ca.city != ''        THEN CONCAT(', ', ca.city)        ELSE '' END,
+              CASE WHEN ca.state_province != '' THEN CONCAT(', ', ca.state_province) ELSE '' END,
+              CASE WHEN ca.postal_code != '' THEN CONCAT(' ', ca.postal_code)  ELSE '' END
+          ) AS primary_billing,
+
+          (SELECT COUNT(*) 
+           FROM customer_addresses 
+           WHERE address_type = 'Billing' 
+             AND customer_id = ca.customer_id
+          ) AS billing_count
+      FROM customer_addresses ca
+      WHERE ca.is_primary = 1
+        AND ca.address_type = 'Billing'
+  ) AS b ON c.customer_id = b.customer_id
+
+  WHERE c.customer_id = :id
+  LIMIT 1
+";
+
+    
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([':id' => $customerId]);
         $customer = $stmt->fetch(PDO::FETCH_ASSOC);
-
+    
         return $customer ?: null;
     }
+    
 
     /**
      * Retrieve all addresses for a given customer (using your new 'customer_addresses' table).

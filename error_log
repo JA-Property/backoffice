@@ -1,6 +1,8 @@
-[28-Feb-2025 00:50:01 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method App\Models\Customer::createCustomer() in /home/japrdjyn/backoffice/app/Controllers/CustomerController.php:190
+[01-Mar-2025 18:29:10 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'c.status' in 'SELECT' in /home/japrdjyn/backoffice/app/Models/Customer.php:110
 Stack trace:
-#0 /home/japrdjyn/backoffice/index.php(184): App\Controllers\CustomerController->createAction()
-#1 /home/japrdjyn/backoffice/index.php(209): {closure}()
-#2 {main}
-  thrown in /home/japrdjyn/backoffice/app/Controllers/CustomerController.php on line 190
+#0 /home/japrdjyn/backoffice/app/Models/Customer.php(110): PDOStatement->execute()
+#1 /home/japrdjyn/backoffice/app/Controllers/CustomerController.php(73): App\Models\Customer::getCustomers()
+#2 /home/japrdjyn/backoffice/index.php(145): App\Controllers\CustomerController->renderAllCustomers()
+#3 /home/japrdjyn/backoffice/index.php(194): {closure}()
+#4 {main}
+  thrown in /home/japrdjyn/backoffice/app/Models/Customer.php on line 110

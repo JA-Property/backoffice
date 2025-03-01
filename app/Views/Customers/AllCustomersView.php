@@ -318,7 +318,7 @@
                 </td>
                 <td class="py-3 px-4">
                   <a 
-                    href="/staff/customers/<?= $cust['customer_id'] ?>"
+                    href="/customers/view?id=<?= $cust['customer_id'] ?>"
                     class="text-blue-600 underline hover:text-blue-800"
                     data-column="name"
                   >

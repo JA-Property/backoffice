@@ -11,7 +11,7 @@
         </a>
       </li>
       <li>
-        <a class="flex flex-col items-center text-gray-600" href="/finances/invoices" style="font-size: 12px;">
+        <a class="flex flex-col items-center text-gray-600" href="/customers/all" style="font-size: 12px;">
           <i class="fas fa-users" aria-hidden="true"></i>
           <span>Customers</span>
         </a>
@@ -43,10 +43,10 @@
           class="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 shadow-md text-sm w-48 z-50"
           x-transition
         >
-          <a class="block px-4 py-2 hover:bg-gray-100" href="/customers">
+          <a class="block px-4 py-2 hover:bg-gray-100" href="/customers/all">
             <i class="fal fa-users mr-1" aria-hidden="true"></i> Customers
           </a>
-          <a class="block px-4 py-2 hover:bg-gray-100" href="/assets">
+          <a class="block px-4 py-2 hover:bg-gray-100" href="/properties/all">
             <i class="fal fa-home mr-2" aria-hidden="true"></i> Properties
           </a>
           <a class="block px-4 py-2 hover:bg-gray-100" href="/finances/estimates">
