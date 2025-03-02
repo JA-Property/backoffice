@@ -1,225 +1,274 @@
 <?php
+/**
+ * /app/Controllers/CustomerController.php
+ *
+ * Responsible for handling all customer-related operations within the application, including:
+ *  - Rendering lists of customers (search, sort, pagination)
+ *  - Batch actions (mark overdue, send email, export)
+ *  - Viewing a single customer’s details
+ *  - Creating new customers
+ *  - Rendering "New Customer" form
+ *
+ * Copyright:
+ *  (c) 2025 JA Property Management LLC. All rights reserved.
+ *  Confidential & Proprietary
+ *
+ * @package   App\Controllers
+ * @author    JA Property Management LLC.
+ * @version   0.1.0
+ */
+
 namespace App\Controllers;
 
-// Suppose your Customer.php is at C:\xampp\htdocs\app\Models\Customer.php
-
 use App\Models\Customer;
+use Exception;
 
-// Now the controller referencing App\Models\Customer can find the class
-
-
+/**
+ * Class CustomerController
+ *
+ * Provides endpoints and methods for managing customers,
+ * including listing, viewing, creating, and batch actions.
+ */
 class CustomerController
 {
     /**
-     * Display the "All Customers" page:
-     *  - Search & filter
-     *  - Sorting
-     *  - Pagination
-     *  - Quick stats (total count, total balance)
-     *  - Optional batch actions
+     * Renders the "All Customers" page, handling search, sorting, pagination,
+     * and optional batch actions (POST).
+     *
+     * @return void
      */
-    public function renderAllCustomers()
+    public function renderAllCustomers(): void
     {
-        // 1) Gather input from $_GET or $_POST
-        $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : null;
-        $statusFilter = isset($_GET['status']) ? trim($_GET['status']) : null;
-
-        // Sorting
-        $sortColumn = isset($_GET['sort']) ? trim($_GET['sort']) : 'name';
-        $sortOrder = isset($_GET['order']) ? strtoupper($_GET['order']) : 'ASC';
-
-        // Pagination
-        $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
-        $pageSize = isset($_GET['pageSize']) ? (int) $_GET['pageSize'] : 10;
-        if ($page < 1) {
-            $page = 1;
-        }
-        $offset = ($page - 1) * $pageSize;
-
-        // 2) If there’s a request for batch actions, handle that
-        if (!empty($_POST['batchAction']) && !empty($_POST['customerIds'])) {
-            $customerIds = array_map('intval', $_POST['customerIds']);
-            $action = $_POST['batchAction'];
-
-            switch ($action) {
-                case 'markOverdue':
-                    // Suppose we want to set them to Overdue
-                    $overdueId = Customer::getStatusIdByName('Overdue');
-                    if ($overdueId) {
-                        Customer::batchUpdateStatus($customerIds, $overdueId);
-                    }
-                    break;
-
-                case 'sendEmail':
-                    // Example: call a method to send email
-                    Customer::batchSendEmail($customerIds);
-                    break;
-
-                case 'export':
-                    // Example: you might generate a CSV or PDF
-                    // We'll do a pseudo-code approach:
-                    // $this->exportCustomers($customerIds);
-                    break;
-            }
-
-            // After batch action, redirect to avoid form re-submission
-            header('Location: /customers');
-            exit;
+        // 1) Possibly handle batch actions if POST
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleBatchActions();
         }
 
-        // 3) Get data from the Model
-        //    a) All customers matching search/status, sorted, limited
-        $customers = Customer::getCustomers(
-            $searchTerm,
-            $statusFilter,
-            $sortColumn,
-            $sortOrder,
-            $offset,
-            $pageSize
-        );
+        // 2) Gather query parameters
+        $searchTerm   = trim($_GET['search'] ?? '');
+        $statusFilter = trim($_GET['status'] ?? '');
+        $sortColumn   = trim($_GET['sort']   ?? 'name');
+        $sortOrder    = strtoupper(trim($_GET['order'] ?? 'ASC'));
 
-        //    b) Total count of matching rows (for pagination)
-        $totalCount = Customer::getCustomersCount($searchTerm, $statusFilter);
+        // Whitelist columns & orders
+        $allowedSortCols = ['name', 'propertyCount', 'phone', 'email', 'opening_balance'];
+        if (!in_array($sortColumn, $allowedSortCols, true)) {
+            $sortColumn = 'name';
+        }
+        $sortOrder = in_array($sortOrder, ['ASC','DESC'], true) ? $sortOrder : 'ASC';
 
-        //    c) Sum of all balances
+        // 3) Pagination
+        $page     = max(1, (int)($_GET['page'] ?? 1));
+        $pageSize = max(1, (int)($_GET['pageSize'] ?? 10));
+        $offset   = ($page - 1) * $pageSize;
+
+        // 4) Fetch data from model
+        $customers    = Customer::getCustomers($searchTerm, $statusFilter, $sortColumn, $sortOrder, $offset, $pageSize);
+        $totalCount   = Customer::getCustomersCount($searchTerm, $statusFilter);
         $totalBalance = Customer::getTotalBalance();
+        $totalPages   = max(1, ceil($totalCount / $pageSize));
 
-        // 4) Calculate how many pages we have in total
-        $totalPages = max(1, ceil($totalCount / $pageSize));
+        // 5) Prepare data for the view
+        $data = [
+            'searchTerm'   => $searchTerm,
+            'statusFilter' => $statusFilter,
+            'sortColumn'   => $sortColumn,
+            'sortOrder'    => $sortOrder,
+            'page'         => $page,
+            'pageSize'     => $pageSize,
+            'customers'    => $customers,
+            'totalCount'   => $totalCount,
+            'totalBalance' => $totalBalance,
+            'totalPages'   => $totalPages,
+            'headerIcon'   => 'fa-users',
+            'headerTitle'  => 'All Customers',
+            'pageTitle'    => 'All Customers',
+        ];
 
-        // 5) Render the "All Customers" view
-        // You can pass data to the view in multiple ways.
-        // If you're using a simple PHP approach, you might do:
-        $headerIcon = 'fa-users';
-        $headerTitle = 'All Customers';
-        $pageTitle = 'All Customers';
-
-        // We'll store these in variables that your view might expect
-        $totalCustomers = $totalCount; // for the quick stat
-        // The code that sets #totalCustomers / #totalBalance in the HTML
-        // could be replaced or set via partial injection, etc.
-
-        // Now we can load the same view you showed in your snippet:
-        // We'll do a simple approach: define local variables, then include the view.
-        // The final snippet is effectively a layout that merges these variables.
-        // Because your snippet uses $content, we might do:
-        ob_start();
-        include __DIR__ . '/../Views/Customers/AllCustomersView.php';
-        $content = ob_get_clean();
-
-        include __DIR__ . '/../Views/Layouts/Staff.php';
-
+        // 6) Render using our helper
+        $this->renderView('Customers/AllCustomersView.php', $data);
     }
 
     /**
-     * Render the Single Customer View.
-     * Expects a GET parameter 'id' with the customer's ID.
+     * Handles batch actions when the request is POST (markOverdue, sendEmail, export).
+     *
+     * @return void
      */
-    public function renderSingleCustomer()
+    private function handleBatchActions(): void
     {
-        
-        // Retrieve the customer ID from GET parameters.
+        $action      = $_POST['batchAction']  ?? null;
+        $customerIds = $_POST['customerIds']  ?? [];
+
+        // If no action or no IDs, do nothing
+        if (!$action || empty($customerIds)) {
+            return;
+        }
+
+        $customerIds = array_map('intval', $customerIds);
+
+        switch ($action) {
+            case 'markOverdue':
+                $overdueId = Customer::getStatusIdByName('Overdue');
+                if ($overdueId) {
+                    Customer::batchUpdateStatus($customerIds, $overdueId);
+                }
+                break;
+
+            case 'sendEmail':
+                Customer::batchSendEmail($customerIds);
+                break;
+
+            case 'export':
+                // $this->exportCustomers($customerIds);
+                break;
+        }
+
+        // Redirect to avoid form re-submission
+        $this->redirect('/customers');
+    }
+
+    /**
+     * Renders a specified view with data, using output buffering.
+     * The layout file (Staff.php) will eventually echo $content.
+     *
+     * @param  string  $viewPath  Relative path to the view (e.g. "Customers/AllCustomersView.php")
+     * @param  array   $data      Key-value data for extraction in the view
+     * @return void
+     */
+    private function renderView(string $viewPath, array $data = []): void
+    {
+        extract($data);
+        ob_start();
+        include __DIR__ . "/../Views/{$viewPath}";
+        $content = ob_get_clean();
+
+        include __DIR__ . '/../Views/Layouts/Staff.php';
+    }
+
+    /**
+     * Simple helper to do an HTTP redirect and then exit.
+     *
+     * @param  string $url
+     * @return never
+     */
+    private function redirect(string $url)
+    {
+        header("Location: {$url}");
+        exit;
+    }
+
+    /**
+     * Renders a single customer’s detail page.
+     * Expects a GET parameter 'id' with the customer's ID.
+     *
+     * @return void
+     */
+    public function renderSingleCustomer(): void
+    {
+        // Retrieve the customer ID from GET parameters
         $customerId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
         if ($customerId <= 0) {
             echo "Invalid customer ID.";
             exit;
         }
 
-        // Get the customer record.
+        // Fetch the customer record
         $customer = Customer::getCustomerById($customerId);
         if (!$customer) {
             echo "Customer not found.";
             exit;
         }
 
-        // Get related data.
-        $addresses = Customer::getCustomerAddresses($customerId);
+        // Fetch related data
+        $addresses  = Customer::getCustomerAddresses($customerId);
         $properties = Customer::getCustomerProperties($customerId);
-        $notes = Customer::getCustomerNotes($customerId);
+        $notes      = Customer::getCustomerNotes($customerId);
 
-        // Set header and page titles.
-        $headerIcon = 'fa-user';
-        $headerTitle = $customer['display_name'] ?? 'Customer Details';
-        $pageTitle = $headerTitle;
+        // Prepare data for the view
+        $data = [
+            'customer'   => $customer,
+            'addresses'  => $addresses,
+            'properties' => $properties,
+            'notes'      => $notes,
+            'headerIcon' => 'fa-user',
+            'headerTitle'=> $customer['display_name'] ?? 'Customer Details',
+            'pageTitle'  => $customer['display_name'] ?? 'Customer Details',
+        ];
 
-        // Make the data available to the view.
-        // (You might use a templating engine in a full framework.)
-        // Here we simply set variables that the view will use.
-        // For example:
-        //   $customer, $addresses, $properties, $notes
-
-        // Capture the view output.
-        ob_start();
-        include __DIR__ . '/../Views/Customers/SingleCustomerView.php';
-        $content = ob_get_clean();
-
-        // Include the layout file which echoes $content.
-        include __DIR__ . '/../Views/Layouts/Staff.php';
+        // Render
+        $this->renderView('Customers/SingleCustomerView.php', $data);
     }
 
-     /**
-     * Render the New Customer Form view.
+    /**
+     * Renders the "New Customer" form view.
      *
-     * This method prepares any default values if necessary,
-     * captures the view output into $content, and then includes
-     * the master layout file.
+     * This method prepares any default values if necessary and
+     * displays the new-customer form to the user.
+     *
+     * @return void
      */
-    public function renderNewCustomer()
+    public function renderNewCustomer(): void
     {
-        // Set header and page titles for the new customer form.
-        $headerIcon  = 'fa-user-plus';
-        $headerTitle = 'New Customer';
-        $pageTitle   = 'New Customer';
+        $data = [
+            'headerIcon'  => 'fa-user-plus',
+            'headerTitle' => 'New Customer',
+            'pageTitle'   => 'New Customer',
+            // Optionally add default data or other variables
+        ];
 
-        // (Optional) Prepare any default values to prefill the form.
-        // For example, you could load a list of referral sources, etc.
-        // $defaultData = [ ... ];
-
-        // Capture the view output.
-        ob_start();
-        include __DIR__ . '/../Views/Customers/NewCustomerView.php';
-        $content = ob_get_clean();
-
-        // Include the master layout file, which will echo $content in the correct spot.
-        include __DIR__ . '/../Views/Layouts/Staff.php';
+        $this->renderView('Customers/NewCustomerView.php', $data);
     }
-    public function createAction()
+
+    /**
+     * createAction()
+     *
+     * Handles creation of a new customer record.
+     * - If GET, renders the new customer form.
+     * - If POST, attempts to create the customer in DB.
+     *
+     * @return void
+     */
+    public function createAction(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
-                // Call the model's method to do inserts
+                // Create the customer using the model
                 $customerId = Customer::createCustomer($_POST);
 
-         
-            // Then pass $customer to your view:
-    
-                // Set a flash message to show after redirect
+                // Example: set a flash message in session for "toast"
+                // Make sure session is started somewhere, e.g., bootstrap
                 $_SESSION['toast'] = [
-                    'type' => 'success', // could be 'success', 'error', etc.
+                    'type'    => 'success',
                     'message' => 'Customer created successfully.'
                 ];
-    
-                // Redirect to the view page
-                header("Location: /customers/view?id=$customerId&tab=properties");
-                exit;
-            } catch (\Exception $e) {
-                // Handle exception (optionally set an error toast)
+
+                // Redirect to the newly created customer's view page, focusing on "properties" tab
+                $this->redirect("/customers/view?id={$customerId}&tab=properties");
+            } catch (Exception $e) {
+                // Handle exception (optional: set an error toast)
                 echo "Error creating customer: " . $e->getMessage();
                 exit;
             }
         } else {
-            // If GET request, render the 'New Customer' form page
+            // If GET request, just render the "New Customer" form
             $this->renderNewCustomer();
         }
     }
-    
 
     /**
-     * (Optional) Example for a dedicated "export" function for batch actions.
+     * exportCustomers()
+     *
+     * (Optional) Example of a dedicated function for batch export.
+     * Currently just a placeholder for generating CSV, PDF, etc.
+     *
+     * @param  array $customerIds
+     * @return void
      */
-    private function exportCustomers(array $customerIds)
+    private function exportCustomers(array $customerIds): void
     {
-        $rows = []; // fetch them from model, then create a CSV, etc.
+        // 1) fetch customer data from the model
+        // 2) build CSV or PDF
+        // 3) output or force download
         // ...
     }
 }

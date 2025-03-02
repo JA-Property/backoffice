@@ -75,7 +75,7 @@ class PropertyController
         $pageTitle   = 'Property Details';
 
         ob_start();
-        include __DIR__ . '/../Views/Properties/SinglePropertyView.php';
+        include __DIR__ . '/../Views/Customers/Properties/SinglePropertyView.php';
         $content = ob_get_clean();
         include __DIR__ . '/../Views/Layouts/Staff.php';
     }

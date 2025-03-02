@@ -334,97 +334,105 @@
         <p class="text-gray-600">
           This is the overview content. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
         </p>
+        <form action="/customers/impersonate" method="POST">
+  <!-- hidden input for which customer to impersonate -->
+  <input type="hidden" name="customer_id" value="25" />
+  <button type="submit">Impersonate this Customer</button>
+</form>
+
       </div>
 
-      <!-- PROPERTIES TAB (Vanilla JS version, no Alpine) -->
-      <div id="properties" class="hidden">
-        <!-- Header Row: Title, Search, Add New -->
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
-          <div>
-            <div class="flex items-center mb-1">
-              <i class="fa fa-home text-xl text-gray-700 mr-2"></i>
-              <h2 class="text-2xl font-bold text-gray-800">Properties</h2>
-            </div>
-            <p class="text-gray-600 text-sm">
-              Manage and view all properties associated with this customer.
-            </p>
-          </div>
+<!-- PROPERTIES TAB (Vanilla JS version, no Alpine) -->
+<div id="properties" class="hidden">
+  <!-- Header Row: Title, Search, Add New -->
+  <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
+    <div>
+      <div class="flex items-center mb-1">
+        <i class="fa fa-home text-xl text-gray-700 mr-2"></i>
+        <h2 class="text-2xl font-bold text-gray-800">Properties</h2>
+      </div>
+      <p class="text-gray-600 text-sm">
+        Manage and view all properties associated with this customer.
+      </p>
+    </div>
 
-          <div class="flex items-center space-x-2 mt-4 md:mt-0">
-            <!-- Search Input (placeholder only) -->
-            <div class="relative">
-              <input
-                type="text"
-                placeholder="Search properties..."
-                class="border border-gray-300 rounded-lg p-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <!-- Optional search icon inside input -->
-              <i class="fa fa-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
-            </div>
+    <div class="flex items-center space-x-2 mt-4 md:mt-0">
+      <!-- Search Input (placeholder only) -->
+      <div class="relative">
+        <input
+          type="text"
+          placeholder="Search properties..."
+          class="border border-gray-300 rounded-lg p-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <!-- Optional search icon inside input -->
+        <i class="fa fa-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+      </div>
 
-            <!-- Add New Button (opens modal) -->
-            <button
-              id="openModalBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 transition focus:outline-none flex items-center space-x-1"
-            >
-              <svg
-                class="w-4 h-4 fill-current inline-block"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M12 5v14M5 12h14"></path>
-              </svg>
-              <span>Add Property</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- NO PROPERTIES: Show a friendly message if array is empty -->
-        <div
-          id="propertiesNone"
-          class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg"
-          style="display: none;"
+      <!-- Add New Button (opens modal) -->
+      <button
+        id="openModalBtn"
+        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 transition focus:outline-none flex items-center space-x-1"
+      >
+        <svg
+          class="w-4 h-4 fill-current inline-block"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         >
-          <div class="flex items-center">
-            <i class="fa fa-exclamation-circle text-yellow-400 mr-2"></i>
-            <p class="text-yellow-700 text-sm">
-              <strong>No properties found.</strong> Add your first property now!
-            </p>
-          </div>
-        </div>
+          <path d="M12 5v14M5 12h14"></path>
+        </svg>
+        <span>Add Property</span>
+      </button>
+    </div>
+  </div>
 
-        <!-- PROPERTIES EXIST -->
-        <div id="propertiesExist" style="display: none;">
-          <!-- Sub-Header: Count or Other Info -->
-          <div class="flex flex-col md:flex-row items-start md:items-center justify-between">
-            <p class="text-gray-600 text-sm">
-              <span class="font-bold text-gray-800">Total Properties:</span>
-              <span id="propCount"></span>
-            </p>
-          </div>
+  <!-- NO PROPERTIES: Show a friendly message if array is empty -->
+  <div
+    id="propertiesNone"
+    class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg"
+    style="display: none;"
+  >
+    <div class="flex items-center">
+      <i class="fa fa-exclamation-circle text-yellow-400 mr-2"></i>
+      <p class="text-yellow-700 text-sm">
+        <strong>No properties found.</strong> Add your first property now!
+      </p>
+    </div>
+  </div>
 
-          <!-- Map Placeholder -->
-          <div class="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden mt-4">
-            <div class="absolute inset-0 flex items-center justify-center text-gray-500">
-              <p class="text-sm">
-                <i class="fa fa-map-marker-alt"></i> Map with property boundaries/pins goes here
-              </p>
-            </div>
-          </div>
+  <!-- PROPERTIES EXIST -->
+  <div id="propertiesExist" style="display: none;">
+    <!-- Sub-Header: Count or Other Info -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between">
+      <p class="text-gray-600 text-sm">
+        <span class="font-bold text-gray-800">Total Properties:</span>
+        <span id="propCount"></span>
+      </p>
+    </div>
 
-          <!-- Property Cards Container -->
-          <div
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"
-            id="propertiesList"
-          >
-            <!-- We'll fill this with JS -->
-          </div>
-        </div>
+    <!-- Map Placeholder -->
+    <div class="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden mt-4">
+      <div class="absolute inset-0 flex items-center justify-center text-gray-500">
+        <p class="text-sm">
+          <i class="fa fa-map-marker-alt"></i>
+          Map with property boundaries/pins goes here
+        </p>
       </div>
-      <!-- End of #properties tab -->
+    </div>
+
+    <!-- Property Cards Container (full-width cards) -->
+    <div
+      class="grid grid-cols-1 gap-4 mt-4"
+      id="propertiesList"
+    >
+      <!-- JavaScript will insert card elements here -->
+    </div>
+  </div>
+</div>
+<!-- End of #properties tab -->
+
 
       <!-- Details Section -->
       <div id="details" class="hidden">
@@ -685,65 +693,69 @@
     });
   });
 
-  // Build a single property card
   function buildPropertyCard(prop) {
-    // Outer container
-    const div = document.createElement('div');
-    div.className = 'bg-white shadow rounded-lg p-4 w-full flex flex-col';
+  // Outer container
+  const div = document.createElement('div');
+  div.className = 'bg-white shadow rounded-lg p-4 w-full flex flex-col';
 
-    // Top row: Title & 3-dot menu
-    const topRow = document.createElement('div');
-    topRow.className = 'flex items-start justify-between';
+  // Top row: Title & 3-dot menu
+  const topRow = document.createElement('div');
+  topRow.className = 'flex items-start justify-between';
 
-    // Left column: address lines
-    const leftCol = document.createElement('div');
-    const h3 = document.createElement('h3');
-    h3.className = 'text-xl font-bold text-gray-800';
-    h3.textContent = prop.addrLine1 || '(No address line 1)';
+  // Left column: address lines
+  const leftCol = document.createElement('div');
 
-    const subtitle = document.createElement('p');
-    subtitle.className = 'text-sm text-gray-500';
-    subtitle.textContent = `${prop.city || ''}, ${prop.state || ''} ${prop.zip || ''}`;
+  // Create a link element for the card title with hover underline
+  const link = document.createElement('a');
+  link.className = 'text-xl font-bold text-gray-800 hover:underline';
+  // Adjust the href below as needed; using prop.id or prop.property_id if available
+  link.href = `/properties/view?id=${prop.property_id || prop.id || ''}`;
+  link.textContent = prop.addrLine1 || '(No address line 1)';
 
-    leftCol.appendChild(h3);
-    leftCol.appendChild(subtitle);
+  // Append the link instead of plain text title
+  leftCol.appendChild(link);
 
-    // Right column: 3-dot menu
-    const rightCol = document.createElement('div');
-    rightCol.className = 'relative';
+  // Create subtitle element for additional location info
+  const subtitle = document.createElement('p');
+  subtitle.className = 'text-sm text-gray-500';
+  subtitle.textContent = `${prop.city || ''}, ${prop.state || ''} ${prop.zip || ''}`.trim();
 
-    // Typically you'd add the menu logic or link here
-    rightCol.innerHTML = `
-      <button class="text-gray-500 focus:outline-none ml-2">
-        <i class="fa fa-ellipsis-v"></i>
-      </button>
-    `;
+  leftCol.appendChild(subtitle);
 
-    // Combine
-    topRow.appendChild(leftCol);
-    topRow.appendChild(rightCol);
+  // Right column: 3-dot menu (unchanged)
+  const rightCol = document.createElement('div');
+  rightCol.className = 'relative';
+  rightCol.innerHTML = `
+    <button class="text-gray-500 focus:outline-none ml-2">
+      <i class="fa fa-ellipsis-v"></i>
+    </button>
+  `;
 
-    // Next row: type badge
-    const typeSpan = document.createElement('span');
-    typeSpan.className = 'mt-2 inline-block text-xs font-semibold px-2 py-1 rounded-full';
-    let bgClass = 'bg-green-100 text-green-800';
-    if (prop.type === 'Commercial') bgClass = 'bg-blue-100 text-blue-800';
-    if (prop.type === 'Industrial') bgClass = 'bg-purple-100 text-purple-800';
-    typeSpan.classList.add(...bgClass.split(' '));
-    typeSpan.textContent = (prop.type || 'Residential') + ' Property';
+  // Combine left and right columns
+  topRow.appendChild(leftCol);
+  topRow.appendChild(rightCol);
 
-    // Next row: notes
-    const notesDiv = document.createElement('div');
-    notesDiv.className = 'mt-2 text-sm text-gray-600';
-    notesDiv.textContent = prop.notes || '';
+  // Next row: type badge
+  const typeSpan = document.createElement('span');
+  typeSpan.className = 'mt-2 inline-block text-xs font-semibold px-2 py-1 rounded-full';
+  let bgClass = 'bg-green-100 text-green-800';
+  if (prop.type === 'Commercial') bgClass = 'bg-blue-100 text-blue-800';
+  if (prop.type === 'Industrial') bgClass = 'bg-purple-100 text-purple-800';
+  typeSpan.classList.add(...bgClass.split(' '));
+  typeSpan.textContent = (prop.type || 'Residential') + ' Property';
 
-    // Put it all together
-    div.appendChild(topRow);
-    div.appendChild(typeSpan);
-    div.appendChild(notesDiv);
+  // Next row: notes
+  const notesDiv = document.createElement('div');
+  notesDiv.className = 'mt-2 text-sm text-gray-600';
+  notesDiv.textContent = prop.notes || '';
 
-    return div;
-  }
+  // Assemble the card
+  div.appendChild(topRow);
+  div.appendChild(typeSpan);
+  div.appendChild(notesDiv);
+
+  return div;
+}
 
   function openModal() {
     // Reset the form to blank if desired

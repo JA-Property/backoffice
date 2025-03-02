@@ -58,6 +58,16 @@ $routes = [
             $controller->renderSingleCustomer();
         }
     ],
+    // Dynamic customer route e.g. /customers/123
+    [
+        'pattern' => '#^/customers/(\d+)$#',
+        'handler' => function ($matches) {
+            // Pass the captured customer ID to the controller via GET variable
+            $_GET['id'] = $matches[1];
+            $controller = new \App\Controllers\CustomerController();
+            $controller->renderSingleCustomer();
+        }
+    ],
         // -----------------------------------------------------------------------------
         // Finance Routes
         // -----------------------------------------------------------------------------
@@ -151,6 +161,57 @@ $routes = [
         'handler' => function () {
             $controller = new \App\Controllers\CustomerController();
             $controller->renderSingleCustomer();
+        }
+    ],
+    [
+        'pattern' => '#^/customers/impersonate$#',
+        'handler' => function () {
+
+            // 1) Make sure it’s a POST request
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                http_response_code(405); // Method Not Allowed
+                echo "Method Not Allowed";
+                exit;
+            }
+// For testing only—set the impersonation permission
+$_SESSION['user']['can_impersonate'] = true;
+
+            // 2) Check user role/permissions
+            // E.g. verify the user can impersonate
+            if (empty($_SESSION['user']['can_impersonate'])) {
+                http_response_code(403); // Forbidden
+                echo "You do not have permission to impersonate clients.";
+                exit;
+            }
+
+            // 3) Get the target customer ID from $_POST
+            $customerId = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
+            if ($customerId <= 0) {
+                echo "Invalid customer ID.";
+                exit;
+            }
+
+            // 4) Generate the token payload
+            //    We'll make it valid for 10 minutes (600 seconds)
+            $payload = [
+                'customer_id' => $customerId,
+                'staff_id'    => $_SESSION['user']['id'], // staff user’s ID
+                'expires'     => time() + 600,            // 10 min from now
+            ];
+
+            // 5) Encode and sign the token
+            $jsonPayload = json_encode($payload);
+            // Get the secret from .env or config
+            $secretKey   = $_ENV['IMPERSONATE_SECRET_KEY'] ?? 'default_secret';
+
+            $signature   = hash_hmac('sha256', $jsonPayload, $secretKey);
+            // Example: combine the payload and signature
+            $token       = base64_encode($jsonPayload) . '.' . $signature;
+
+            // 6) Redirect to the customer portal with the token
+            $impersonateUrl = 'https://customer.japropertysc.com/impersonate?token=' . urlencode($token);
+            header("Location: {$impersonateUrl}");
+            exit;
         }
     ],
     // Property routes 
