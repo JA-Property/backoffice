@@ -1,0 +1,92 @@
+# Composer dependencies
+/vendor/
+composer.lock
+
+# Node dependencies
+/node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment and configuration files
+.env
+.env.*
+!.env.example
+
+# Log files
+/storage/logs/
+*.log
+/logs/
+debug.log
+
+# Cache and temporary files
+/storage/framework/cache/
+storage/framework/views/*
+/storage/framework/sessions/
+storage/framework/testing/*
+/bootstrap/cache/*
+/tmp/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+nbproject/
+.phpstorm.meta.php
+
+# System and OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# PHPUnit
+phpunit.xml
+phpunit.xml.dist
+
+# Laravel specific files
+/public/hot
+/public/storage
+/public/vendor
+/database/database.sqlite
+/database/database.sqlite-journal
+
+# CodeIgniter specific
+/application/cache/*
+/application/logs/*
+/writable/*
+
+# Symfony specific
+/var/
+/config/jwt/private.pem
+/config/jwt/public.pem
+
+# Magento specific
+generated/
+pub/static/frontend/
+pub/static/adminhtml/
+var/cache/
+var/page_cache/
+var/view_preprocessed/
+
+# WordPress specific
+wp-config.php
+wp-content/uploads/
+wp-content/upgrade/
+wp-content/cache/
+
+# Deployment & Build files
+Homestead.yaml
+Homestead.json
+Vagrantfile
+.env.local
+/.env.production
+/.env.testing
+/.env.development
+/.env.staging
+
+# Lock files
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
